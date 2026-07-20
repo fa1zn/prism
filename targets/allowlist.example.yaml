@@ -1,0 +1,57 @@
+# =============================================================================
+# Prism allowlist  (example)
+# =============================================================================
+#
+# This file is the ONLY thing that tells Prism which hosts it is allowed to
+# touch. Copy it to `targets/allowlist.yaml` and edit it for your own scope:
+#
+#     cp targets/allowlist.example.yaml targets/allowlist.yaml
+#
+# Prism refuses to start without `targets/allowlist.yaml`, and refuses to send
+# any request to a host that is not listed here. There is no override flag.
+#
+# WHY THIS EXISTS
+# ---------------
+# Testing a web application you do not own or have written permission to test can
+# be illegal (e.g. the U.S. Computer Fraud and Abuse Act and equivalents
+# elsewhere). This allowlist is your explicit, auditable record of the scope you
+# have authorization for. The `authorization:` field on each entry is where you
+# state, in your own words, why testing that host is permitted. If you cannot
+# fill it in honestly, the host does not belong here.
+#
+# =============================================================================
+
+# Optional. Your name/handle. It is folded into the signature below so a changed
+# operator is visible as a changed signature.
+operator: REPLACE_WITH_YOUR_NAME
+
+targets:
+  # ---------------------------------------------------------------------------
+  # Example entry: a LOCAL OWASP Juice Shop instance.
+  #
+  # Juice Shop is an intentionally vulnerable application built for security
+  # training, so attacking your own local copy is both legal and encouraged.
+  # Start one with:
+  #
+  #     docker run --rm -p 3000:3000 bkimminich/juice-shop
+  # ---------------------------------------------------------------------------
+  - host: localhost:3000
+    # host: exact hostname (e.g. `app.example.com`) or a wildcard such as
+    #   `*.juice-shop.local` (matches any sub-label, but not the bare apex).
+    #   You may pin a port as shown here; then only that port is in scope.
+
+    authorization: 'OWASP Juice Shop running locally on my own machine. Intentionally vulnerable practice target.'
+    # authorization: REQUIRED free text. Why are you allowed to test this host?
+    #   Examples:
+    #     "I own this host."
+    #     "OWASP Juice Shop running locally."
+    #     "Written permission from ACME Corp, engagement #1234, dated 2026-07-15."
+
+    added_at: '2026-07-20'
+    # added_at: ISO date you added this entry, for your own audit trail.
+
+# signature: optional but recommended. A SHA-256 over `operator` + the target
+#   list, printed at startup so any later edit to the scope shows up as a changed
+#   signature. Run Prism once and copy the printed value here to pin it:
+#
+# signature: '0000000000000000000000000000000000000000000000000000000000000000'
