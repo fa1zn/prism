@@ -24,7 +24,14 @@ import type { APIResponse } from 'playwright';
 
 import type { AgentRuntime, TaskBase } from '../core/orchestrator.js';
 import type { EvidenceStore } from '../evidence/store.js';
-import { ensureInScope, formatBytes, pathOf, safeOrigin, workerSource } from './common.js';
+import {
+  describeStatus,
+  ensureInScope,
+  formatBytes,
+  pathOf,
+  safeOrigin,
+  workerSource,
+} from './common.js';
 
 /** Well-known paths the agent probes. `/.well-known/*` can't be enumerated over HTTP, so representative entries stand in. */
 const COMMON_PATHS: readonly string[] = [
@@ -111,10 +118,55 @@ async function visitLanding(
   });
 
   fingerprintApp(title, url, runtime, store);
+  await detectTechnologies(url, runtime, store);
   await captureAccessibilityTree(url, runtime, store);
   await enumerateLinks(url, runtime, store);
   await enumerateForms(url, runtime, store);
   return enumerateScripts(url, runtime, store);
+}
+
+/**
+ * Detect front-end frameworks from the live DOM rather than by grepping minified
+ * bundles (Angular 17+ builds with esbuild, so webpack/`@angular` string markers
+ * are unreliable). The `ng-version` attribute Angular stamps on its root element
+ * is a dependable, read-only signal.
+ */
+async function detectTechnologies(
+  url: string,
+  runtime: AgentRuntime,
+  store: EvidenceStore,
+): Promise<void> {
+  const detected = await runtime.page
+    .evaluate(() => {
+      const found: Array<{ name: string; version: string }> = [];
+      const ng = document.querySelector('[ng-version]');
+      if (ng) found.push({ name: 'Angular', version: ng.getAttribute('ng-version') ?? '' });
+      const win = window as unknown as { React?: unknown; __VUE__?: unknown };
+      if (win.React !== undefined || document.querySelector('[data-reactroot]')) {
+        found.push({ name: 'React', version: '' });
+      }
+      if (win.__VUE__ !== undefined || document.querySelector('[data-v-app]')) {
+        found.push({ name: 'Vue', version: '' });
+      }
+      return found;
+    })
+    .catch(() => [] as Array<{ name: string; version: string }>);
+
+  for (const tech of detected) {
+    const label = tech.version !== '' ? `${tech.name} ${tech.version}` : tech.name;
+    store.observe({
+      category: 'technology',
+      title: `Front-end framework: ${label}`,
+      detail:
+        tech.name === 'Angular'
+          ? `Detected from the ng-version attribute on the app root${tech.version !== '' ? ` (${tech.version})` : ''}.`
+          : `Detected from ${tech.name} runtime markers in the DOM.`,
+      url,
+      severity: 'info',
+      source: sourceFor(runtime),
+      data: { framework: tech.name, version: tech.version },
+    });
+  }
 }
 
 /** Identify the application from obvious tells (the page title). Read-only fingerprinting, no probing. */
@@ -337,15 +389,18 @@ async function probePath(url: string, runtime: AgentRuntime, store: EvidenceStor
   const reachable = status < 400;
   const isResource = path === '/robots.txt' || path === '/sitemap.xml';
 
+  // "Present" covers reachable, access-controlled, and erroring: all confirm the
+  // path exists on the server, unlike a 404.
+  const present = reachable || status === 401 || status === 403 || status >= 500;
+
   store.observe({
     category: isResource ? 'resource' : 'endpoint',
     title: `${path} -> ${status}`,
-    detail: reachable ? 'Reachable.' : 'Not reachable / not found.',
+    detail: describeStatus(status),
     url,
     method: 'GET',
     status,
-    severity:
-      reachable && (path === '/admin' || path === '/api' || path === '/ftp') ? 'low' : 'info',
+    severity: present && (path === '/admin' || path === '/api' || path === '/ftp') ? 'low' : 'info',
     source: sourceFor(runtime),
     data: { contentType: response.headers()['content-type'] ?? '' },
   });
@@ -388,19 +443,18 @@ async function fetchResource(
   const body = await response.body().catch(() => Buffer.alloc(0));
   const text = body.toString('utf8');
 
-  // Read-only framework fingerprinting from obvious markers. No exploitation.
+  // Secondary, best-effort marker scan. The DOM-based detection in
+  // detectTechnologies() is the primary signal; minified bundles often carry no
+  // legible framework strings, so a miss here is not meaningful. No exploitation.
   const hints: string[] = [];
-  if (/ng-version|@angular|platformBrowserDynamic/.test(text)) hints.push('Angular');
-  if (/webpackJsonp|__webpack_require__/.test(text)) hints.push('webpack');
+  if (/ng-version|platformBrowser|ɵ[a-z]/.test(text)) hints.push('Angular');
+  if (/webpackChunk|__webpack_require__/.test(text)) hints.push('webpack');
   if (/React\.createElement|__REACT_DEVTOOLS/.test(text)) hints.push('React');
 
   store.observe({
     category: 'resource',
     title: `${note}: ${pathOf(url)} (${status}, ${formatBytes(body.length)})`,
-    detail:
-      hints.length > 0
-        ? `Framework markers: ${hints.join(', ')}.`
-        : 'Fetched; no framework markers matched.',
+    detail: hints.length > 0 ? `Fetched. Bundle markers: ${hints.join(', ')}.` : 'Fetched.',
     url,
     method: 'GET',
     status,

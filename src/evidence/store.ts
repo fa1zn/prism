@@ -28,6 +28,7 @@ export type EvidenceCategory =
   | 'form' // a form discovered in the DOM
   | 'endpoint' // an HTTP path probed or referenced
   | 'resource' // robots.txt, sitemap.xml, and similar
+  | 'technology' // a detected framework/library (e.g. Angular)
   | 'verification' // the result of verifying an earlier hypothesis
   | 'scope-violation' // a request the scope-guard refused
   | 'note'; // free-form annotation

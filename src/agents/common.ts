@@ -66,6 +66,15 @@ export function safeOrigin(url: string): string {
   }
 }
 
+/** Plain-language description of an HTTP status, accurate about 5xx and access control. */
+export function describeStatus(status: number): string {
+  if (status >= 200 && status < 400) return 'Reachable.';
+  if (status === 401 || status === 403) return 'Present but access-controlled.';
+  if (status === 404 || status === 410) return 'Not found.';
+  if (status >= 500) return 'Server error (reachable, but erroring).';
+  return 'Not reachable.';
+}
+
 /** Human-readable byte size. */
 export function formatBytes(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;

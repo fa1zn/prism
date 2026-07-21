@@ -1,12 +1,24 @@
 import { describe, expect, it } from 'vitest';
 
 import { EvidenceStore } from '../src/evidence/store.js';
+import { describeStatus } from '../src/agents/common.js';
 import {
   classifyStatus,
   isClientRoute,
   seedVerifyTasks,
   verdictFor,
 } from '../src/agents/verify.js';
+
+describe('describeStatus wording', () => {
+  it('distinguishes reachable, not-found, access-controlled, and server error', () => {
+    expect(describeStatus(200)).toMatch(/reachable/i);
+    expect(describeStatus(404)).toMatch(/not found/i);
+    expect(describeStatus(403)).toMatch(/access-controlled/i);
+    // A 500 must not be reported as "not found".
+    expect(describeStatus(500)).toMatch(/server error/i);
+    expect(describeStatus(500)).not.toMatch(/not found/i);
+  });
+});
 
 describe('verify: status classification', () => {
   it('treats 2xx/3xx as confirmed', () => {
