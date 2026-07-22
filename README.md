@@ -1,15 +1,40 @@
 # Prism
 
-Prism is a command-line security testing tool for web applications. You point it at a target
-you are authorized to test, and it runs a set of headless-browser agents that map the app,
-enumerate paths and forms, verify what they find, and write a report.
+Prism is a command-line tool that does automated security recon on a web app. You give it a
+target you are allowed to test and an allowlist. It runs a few headless-browser agents that
+crawl the app, read the DOM and the network traffic, enumerate paths and forms, and chase
+whatever looks worth chasing. Then it writes up what it found.
 
-- Requests are restricted to an allowlist you define. Anything not on the allowlist is
-  blocked before it is sent, and there is no flag or environment variable to disable this.
-- Findings are labeled either observed (seen directly during the run) or hypothesized (inferred
-  and not yet checked). A verify step checks each hypothesis against the target and marks it
-  confirmed or refuted.
-- Each run writes a Markdown report and a self-contained HTML report to `reports/`.
+The idea is depth over breadth. A lot of scanners touch a thousand things and tell you
+nothing. Prism follows fewer leads all the way down, so you end up with a picture of the app
+instead of a checklist.
+
+Two rules it does not break.
+
+**It stays in scope.** Every request goes through one check against your allowlist. If a host
+is not on the list, the request is not sent. There is no flag or environment variable to turn
+that off. When the browser tries to reach something off-list on its own (a tracker, a CDN, an
+outbound call), Prism kills the request and writes it down.
+
+**It does not guess out loud.** Everything it records is tagged observed or hypothesized.
+Observed means an agent saw it. Hypothesized means an agent inferred it, like a path named in
+robots.txt, and has not checked yet. A second pass takes each hypothesis and confirms or kills
+it. The report keeps the two apart, so you never read a hunch as a fact.
+
+Each run writes two files: a Markdown report and a self-contained HTML page.
+
+## What it does
+
+- Loads the app, reads the accessibility tree, and pulls the framework and version off the page.
+- Enumerates links, forms (fields and methods), and well-known paths.
+- Reads robots.txt and sitemap.xml and treats anything named there as a lead to verify.
+- Fetches same-origin script bundles and notes what they are.
+- Runs several agents in parallel, each in its own browser context, pulling work off a shared
+  queue. Finding one thing can queue up the next.
+- Verifies each lead with a single GET: confirmed, refuted, access-controlled, or a client-side
+  route that an HTTP GET cannot resolve.
+
+It does recon and verification. It does not exploit anything, and a run sends no attack traffic.
 
 ## Example
 
