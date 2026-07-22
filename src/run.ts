@@ -10,6 +10,7 @@ import { handleReconTask, seedReconTasks } from './agents/recon.js';
 import { handleVerifyTask, seedVerifyTasks } from './agents/verify.js';
 import { DEFAULT_CONCURRENCY, MAX_CONCURRENCY, runOrchestrator } from './core/orchestrator.js';
 import { EvidenceStore } from './evidence/store.js';
+import { writeHtmlReport } from './reporters/html.js';
 import { writeMarkdownReport } from './reporters/markdown.js';
 import type { Allowlist } from './scope/index.js';
 import { computeSignature } from './scope/index.js';
@@ -31,7 +32,10 @@ export interface RunOptions {
 /** Result of a run. */
 export interface RunResult {
   store: EvidenceStore;
+  /** Path to the Markdown report. */
   reportPath: string;
+  /** Path to the HTML dashboard. */
+  htmlPath: string;
   concurrency: number;
   startedAt: string;
   finishedAt: string;
@@ -74,13 +78,15 @@ export async function runReconAndReport(options: RunOptions): Promise<RunResult>
   }
 
   const finishedAt = new Date().toISOString();
-  const reportPath = writeMarkdownReport(store, {
+  const reportMeta = {
     target: options.target,
     startedAt,
     finishedAt,
     allowlistSignature: computeSignature(options.allowlist),
     concurrency,
-  });
+  };
+  const reportPath = writeMarkdownReport(store, reportMeta);
+  const htmlPath = writeHtmlReport(store, reportMeta);
 
-  return { store, reportPath, concurrency, startedAt, finishedAt };
+  return { store, reportPath, htmlPath, concurrency, startedAt, finishedAt };
 }

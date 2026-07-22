@@ -6,4 +6,5 @@
  */
 
 export type { ReportMeta } from './markdown.js';
-export { renderMarkdownReport, writeMarkdownReport } from './markdown.js';
+export { renderMarkdownReport, summaryParagraph, writeMarkdownReport } from './markdown.js';
+export { renderHtmlReport, writeHtmlReport } from './html.js';

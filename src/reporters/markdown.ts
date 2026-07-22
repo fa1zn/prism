@@ -103,8 +103,8 @@ export function writeMarkdownReport(
   return file;
 }
 
-/** One-paragraph plain-language summary of the run. */
-function summaryParagraph(store: EvidenceStore, meta: ReportMeta): string {
+/** One-paragraph plain-language summary of the run. Shared with the HTML reporter. */
+export function summaryParagraph(store: EvidenceStore, meta: ReportMeta): string {
   const observed = store.observed();
   const hypothesized = store.hypothesized();
   const agents =

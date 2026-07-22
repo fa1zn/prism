@@ -36,7 +36,9 @@ async function main(): Promise<void> {
     `Done. ${result.store.count()} findings ` +
       `(${result.store.observed().length} observed, ${result.store.hypothesized().length} hypothesized).\n`,
   );
-  process.stdout.write(`Report written to: ${result.reportPath}\n`);
+  process.stdout.write(`Markdown report: ${result.reportPath}\n`);
+  process.stdout.write(`HTML dashboard:  ${result.htmlPath}\n`);
+  process.stdout.write('View it with:    pnpm report:serve\n');
 }
 
 main().catch((err: unknown) => {

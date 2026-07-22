@@ -1,7 +1,7 @@
 {
   "name": "prism",
-  "version": "0.0.0",
-  "description": "A multi-agent security research framework that orchestrates parallel headless-browser agents to explore web applications with depth-first discipline. For authorized testing only.",
+  "version": "0.1.0",
+  "description": "An autonomous web-recon tool: point it at an authorized target and get back a scoped, evidence-graded report. Requests can never leave a hand-written allowlist. For authorized testing only.",
   "type": "module",
   "license": "MIT",
   "engines": {
@@ -27,7 +27,8 @@
     "test:watch": "vitest",
     "lint": "eslint . && prettier --check .",
     "format": "prettier --write .",
-    "demo:juiceshop": "tsx demos/juiceshop.ts"
+    "demo:juiceshop": "tsx demos/juiceshop.ts",
+    "report:serve": "node scripts/serve-reports.mjs"
   },
   "dependencies": {
     "playwright": "^1.48.0",
