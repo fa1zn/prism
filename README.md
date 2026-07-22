@@ -1,40 +1,27 @@
 # Prism
 
-Prism is a command-line tool that does automated security recon on a web app. You give it a
-target you are allowed to test and an allowlist. It runs a few headless-browser agents that
-crawl the app, read the DOM and the network traffic, enumerate paths and forms, and chase
-whatever looks worth chasing. Then it writes up what it found.
+Prism is a command-line tool for automated security recon on a web app. You give it a target
+you are allowed to test and an allowlist. It runs headless-browser agents that crawl the app,
+enumerate paths and forms, verify what they find, and write a report.
 
-The idea is depth over breadth. A lot of scanners touch a thousand things and tell you
-nothing. Prism follows fewer leads all the way down, so you end up with a picture of the app
-instead of a checklist.
+Requests are checked against the allowlist. A host that is not on the list is never contacted,
+and there is no flag or environment variable to disable that.
 
-Two rules it does not break.
+Findings are labeled observed or hypothesized. Observed means an agent saw it. Hypothesized
+means it was inferred (for example, a path named in robots.txt) and not yet checked. A verify
+pass confirms or refutes each hypothesis.
 
-**It stays in scope.** Every request goes through one check against your allowlist. If a host
-is not on the list, the request is not sent. There is no flag or environment variable to turn
-that off. When the browser tries to reach something off-list on its own (a tracker, a CDN, an
-outbound call), Prism kills the request and writes it down.
-
-**It does not guess out loud.** Everything it records is tagged observed or hypothesized.
-Observed means an agent saw it. Hypothesized means an agent inferred it, like a path named in
-robots.txt, and has not checked yet. A second pass takes each hypothesis and confirms or kills
-it. The report keeps the two apart, so you never read a hunch as a fact.
-
-Each run writes two files: a Markdown report and a self-contained HTML page.
+Each run writes a Markdown report and an HTML report to `reports/`. Prism does recon and
+verification. It does not exploit anything.
 
 ## What it does
 
-- Loads the app, reads the accessibility tree, and pulls the framework and version off the page.
+- Loads the app, reads the accessibility tree, and detects the framework and version.
 - Enumerates links, forms (fields and methods), and well-known paths.
-- Reads robots.txt and sitemap.xml and treats anything named there as a lead to verify.
-- Fetches same-origin script bundles and notes what they are.
-- Runs several agents in parallel, each in its own browser context, pulling work off a shared
-  queue. Finding one thing can queue up the next.
-- Verifies each lead with a single GET: confirmed, refuted, access-controlled, or a client-side
-  route that an HTTP GET cannot resolve.
-
-It does recon and verification. It does not exploit anything, and a run sends no attack traffic.
+- Reads robots.txt and sitemap.xml and verifies anything named there.
+- Fetches same-origin script bundles.
+- Runs several agents in parallel, each in its own browser context.
+- Verifies each lead with a single GET: confirmed, refuted, access-controlled, or client-side route.
 
 ## Example
 
